@@ -62,3 +62,8 @@ flatbuild
 
 # Snap
 *.snap
+
+# local packaging artifacts
+package-win.sh
+portable/
+*.zip
