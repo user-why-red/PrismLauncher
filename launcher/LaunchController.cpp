@@ -134,26 +134,14 @@ LaunchDecision LaunchController::decideLaunchMode()
         return LaunchDecision::Continue;
     }
 
-    const auto* accounts = APPLICATION->accounts();
-    MinecraftAccountPtr accountToCheck = nullptr;
-
-    if (m_accountToUse->accountType() != AccountType::Offline) {
-        accountToCheck = m_accountToUse->ownsMinecraft() ? m_accountToUse : nullptr;
-    } else if (const auto defaultAccount = accounts->defaultAccount(); defaultAccount && defaultAccount->ownsMinecraft()) {
-        accountToCheck = defaultAccount;
-    } else {
-        for (int i = 0; i < accounts->count(); i++) {
-            if (const auto account = accounts->at(i); account->ownsMinecraft()) {
-                accountToCheck = account;
-                break;
-            }
-        }
-    }
-
-    if (!accountToCheck) {
-        m_actualLaunchMode = LaunchMode::Demo;
+    // Launch immediately in true offline mode
+    if (m_accountToUse->accountType() == AccountType::Offline) {
+        m_actualLaunchMode = LaunchMode::Offline;
         return LaunchDecision::Continue;
     }
+
+    // Use the selected account directly — do not search for another account that owns Minecraft
+    MinecraftAccountPtr accountToCheck = m_accountToUse;
 
     auto state = accountToCheck->accountState();
     const bool needsRefresh =
@@ -184,16 +172,16 @@ LaunchDecision LaunchController::decideLaunchMode()
     QString reauthReason;
     switch (state) {
         case AccountState::Errored:
-            reauthReason = tr("An error occurred while refreshing '%1'").arg(accountToCheck->profileName());
+            reauthReason = tr("An error occurred while refreshing the account");
             break;
         case AccountState::Expired:
-            reauthReason = tr("'%1' has expired and needs to be reauthenticated").arg(accountToCheck->profileName());
+            reauthReason = tr("The account has expired and needs to be reauthenticated");
             break;
         case AccountState::Disabled:
-            reauthReason = tr("The launcher's client identification has changed");
+            reauthReason = tr("The launcher's client identification has changed. Please remove this account and add it again.");
             break;
         case AccountState::Gone:
-            reauthReason = tr("'%1' no longer exists on the servers").arg(accountToCheck->profileName());
+            reauthReason = tr("The account no longer exists on the servers. It may have been migrated, in which case please add the new account you migrated this one to.");
             break;
         default:
             m_actualLaunchMode =
